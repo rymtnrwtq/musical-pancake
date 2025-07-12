@@ -1,42 +1,42 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8">
-  <title>Локальный HLS Player</title>
+  <meta charset="UTF-8" />
+  <title>HLS Player через прокси</title>
   <style>
-    body { background: #000; display:flex;justify-content:center;align-items:center; height:100vh; margin:0 }
-    video { width:90%; max-width:800px; border:2px solid #fff }
+    body { background: #000; margin: 0; height: 100vh; display: flex; justify-content: center; align-items: center; }
+    video { width: 90%; max-width: 800px; border: 2px solid #fff; }
   </style>
 </head>
 <body>
   <video id="video" controls></video>
 
-  <!-- HLS.js -->
   <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
   <script>
     const video = document.getElementById('video');
-    // 1) Плейлист и сегменты ты уже разместил в репо рядом с этим index.html
-    const videoSrc = '1.m3u8';
-    console.log('📺 Будем играть локальный HLS:', videoSrc);
+    const original = 'https://static.2sub.movie/series/friends/s1e1/hls_sd/1.m3u8';
+    const proxy = 'https://cors-proxy.yt-slova.workers.dev//?url=';
+    const videoSrc = proxy + encodeURIComponent(original);
+
+    console.log('🎯 Источник:', videoSrc);
 
     if (Hls.isSupported()) {
       const hls = new Hls();
-      // Логируем события
-      hls.on(Hls.Events.ERROR,    (_, data) => console.error('HLS Error:', data));
-      hls.on(Hls.Events.MANIFEST_PARSED, () => { console.log('✅ Manifest parsed'); video.play().catch(e=>console.warn(e)); });
-      hls.on(Hls.Events.LEVEL_LOADED,  (_, data) => console.log('🌐 Level loaded, фрагментов:', data.details.fragments.length));
-      hls.on(Hls.Events.FRAG_LOADED,   (_, data) => console.log('▶️ Frag loaded:', data.frag.url.split('/').pop()));
-      console.log('🔗 Загружаем локальный источник через HLS.js');
       hls.loadSource(videoSrc);
       hls.attachMedia(video);
-    }
-    else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-      console.log('🍎 Родной HLS поддерживается');
+
+      hls.on(Hls.Events.MANIFEST_PARSED, function () {
+        console.log('✅ Манифест загружен');
+        video.play().catch(err => console.warn('⛔ Не удалось запустить:', err));
+      });
+
+      hls.on(Hls.Events.ERROR, function (event, data) {
+        console.error('❌ Ошибка HLS:', data);
+      });
+    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
       video.src = videoSrc;
-      video.addEventListener('loadedmetadata', ()=> video.play().catch(e=>console.warn(e)));
-    }
-    else {
-      console.error('❌ HLS не поддерживается');
+      video.addEventListener('loadedmetadata', () => video.play());
+    } else {
       alert('Ваш браузер не поддерживает HLS.');
     }
   </script>
